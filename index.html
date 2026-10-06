@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trick or Treat Scavenger Hunt</title>
+<style>
+:root{--bg:#fde9d6;--ink:#2b1442;--mute:#6d5486;--card:#fff;--line:#e2c3a4;--acc:#d9480f;--accink:#fff;--ok:#1b7a43;--bad:#9c1f6b;--tile:#fbe0c4}
+@media (prefers-color-scheme:dark){:root{--bg:#190a2b;--ink:#fbeedd;--mute:#c3a9e0;--card:#2a1546;--line:#4b2c78;--acc:#ff922b;--accink:#1a0b2e;--ok:#8be0a4;--bad:#ff8fd0;--tile:#3a1f61}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 Georgia,"Times New Roman",serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+h1{font:bold 2rem/1.15 Chiller,Papyrus,Georgia,serif;margin:.1em 0;letter-spacing:.02em}
+.sub{margin:0;color:var(--mute);font-style:italic}
+.banner{display:flex;align-items:center;gap:12px}
+.ghost-ico{font-size:2.6rem;display:inline-block;animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.ghost-ico{animation:none}}
+p{margin:.5em 0}
+.mute{color:var(--mute)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:16px}
+label{display:block;font-weight:bold;margin-bottom:4px}
+input[type=text]{font:inherit;padding:10px;width:100%;max-width:340px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.primary{background:var(--acc);color:var(--accink);border:0;border-radius:6px;padding:10px 18px;font-weight:bold}
+.ghost{background:none;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:9px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px;margin:12px 0}
+.tile{background:var(--tile);border:2px solid var(--line);border-radius:8px;color:var(--ink);font-size:1.9rem;padding:10px 0}
+.tile:hover{border-color:var(--acc)}
+.tile[aria-pressed=true]::after{content:' 🎃'}
+.tile[aria-pressed=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.top{display:flex;gap:18px;align-items:flex-start}
+.big{font-size:2.8rem;line-height:1;min-width:76px;height:76px;display:grid;place-items:center;font-weight:bold;background:var(--acc);color:var(--accink);border-radius:50% 50% 46% 46%;box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)}
+.opts{display:grid;gap:10px;margin-top:18px}
+.opt{text-align:left;background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:8px;padding:12px 14px}
+.opt:hover{border-color:var(--acc)}
+.trail{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.trail span{background:var(--tile);border-radius:5px;padding:2px 9px;font-weight:bold}
+.trail span:not(.now)::after{content:' 🍬'}
+.trail span.now{background:var(--acc);color:var(--accink)}
+.word{font-size:2rem;letter-spacing:.12em;font-weight:bold;word-break:break-all}
+.good{color:var(--ok)}.badc{color:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div class="banner"><span class="ghost-ico" aria-hidden="true">👻</span><div><h1>Trick or Treat Scavenger Hunt</h1><p class="sub">Collecting Data edition</p></div></div>
+
+<section id="start" class="panel">
+  <p>🏚️ Each lettered card is a house on the street. Answer the question at the door and your answer tells you which house to visit next. Get every answer right and you'll collect candy from all 12 houses and end up back at the house where you started. 🕸️</p>
+  <p class="mute">Keep scratch paper handy for your work, and no peeking at the candy bowl.</p>
+  <label for="nm">Your name (and partner's, if working together)</label>
+  <input id="nm" type="text" autocomplete="off">
+  <p style="margin-top:18px"><b>Choose your first house</b></p>
+  <div class="grid" id="tiles"></div>
+  <div class="row">
+    <button class="primary" id="go" disabled>Start trick-or-treating 🎃</button>
+    <button class="ghost" id="rnd">Surprise me 🦇</button>
+  </div>
+</section>
+
+<section id="play" class="panel" hidden>
+  <div class="top">
+    <div class="big" id="ltr" aria-label="Card letter"></div>
+    <div id="q"></div>
+  </div>
+  <div class="opts" id="opts"></div>
+  <p class="mute" style="margin-top:18px">Houses visited (candy collected 🍬)</p>
+  <div class="trail" id="trail"></div>
+</section>
+
+<section id="end" class="panel" hidden>
+  <h2 id="verdict" style="margin-top:0"></h2>
+  <p class="mute" id="who"></p>
+  <p>Your trick-or-treat route</p>
+  <div class="word" id="path"></div>
+  <p id="msg"></p>
+  <div class="row">
+    <button class="primary" id="again">Try again from the same house</button>
+    <button class="ghost" id="copy">Copy my result</button>
+    <button class="ghost" id="new">Start over</button>
+  </div>
+  <p class="mute" id="copied" aria-live="polite"></p>
+</section>
+</main>
+
+<script>
+// Each option: [text, destination letter]. The correct option sends you to KEY[letter].
+const KEY={N:'I',I:'G',G:'H',H:'T',T:'W',W:'A',A:'L',L:'K',K:'E',E:'R',R:'S',S:'N'};
+const C={
+N:{q:"The organizers of a regional college fair want to estimate the average number of colleges that high school seniors attending the fair have applied to so far. During the fair, they randomly select 120 seniors from those in attendance and ask each selected student how many colleges they have applied to. All 120 students responded. Which of the following correctly describes the sample and the population to which it would be most reasonable to generalize the results?",
+o:[["The sample is all students attending the college fair, and the population is all high school seniors in the region.","H"],["The sample is the 120 selected seniors who responded, and the population is all high school seniors in the region.","W"],["The sample is the 120 selected seniors who responded, and the population is all students attending the college fair.","I"],["The sample is the average number of colleges applied to, and the population is all students attending the college fair.","L"]]},
+I:{q:"The manager of a local gym wants to estimate the proportion of its members who plan to renew their membership next year. The manager posts a survey link on the gym's website and encourages members to complete the survey if they wish. After one week, 310 members have responded. Which of the following is the most likely source of bias in this study?",
+o:[["Members who responded may not be representative of all gym members.","G"],["The sample size is too large to produce an unbiased estimate.","T"],["The manager did not use random assignment.","K"],["The survey was only posted for one week.","A"]]},
+G:{q:"A city wants to estimate the proportion of households that use public transportation as their primary method of commuting. The city is divided into neighborhoods, each of which contains a mixture of household types and income levels. The city randomly selects 12 neighborhoods and surveys every household within each selected neighborhood. Which of the following best explains why this method is classified as a cluster random sample?",
+o:[["The neighborhoods were selected using a random mechanism.","E"],["The population was divided into non-overlapping groups.","W"],["All households within selected neighborhoods were included in the sample.","H"],["The households within each neighborhood are similar to one another.","L"]]},
+H:{q:"A large retail company wants to estimate customer satisfaction across its stores nationwide. The company creates a list of all customers who made a purchase in the past year, randomizes the list, and then surveys every 500th customer on the randomized list. Which of the following best describes this sampling method?",
+o:[["Simple random sample","A"],["Stratified random sample","K"],["Cluster random sample","R"],["Systematic random sample","T"]]},
+T:{q:"A school district wants to estimate the average number of minutes students spend per day on social media. Students are divided into two groups, middle school and high school, and a simple random sample of students is selected from each group. Which of the following is the primary advantage of using this sampling method instead of a simple random sample of all students?",
+o:[["It eliminates response bias.","E"],["It reduces variability in estimates by accounting for known differences between groups.","W"],["It ensures every student has the same chance of being selected.","S"],["It allows cause-and-effect conclusions to be drawn.","L"]]},
+W:{q:"Which of the following sampling plans correctly pairs the sampling method with its defining characteristic?",
+o:[["Stratified random sample — all individuals within selected groups are surveyed.","N"],["Cluster random sample — individuals are selected at fixed intervals after a random start.","R"],["Systematic random sample — simple random samples are taken from each group.","K"],["Simple random sample — every sample of the same size has the same chance of being selected.","A"]]},
+A:{q:"Which of the following scenarios best illustrates nonresponse bias, rather than another type of bias?",
+o:[["Individuals with strong opinions choose to participate in an online poll.","S"],["Survey responses differ from true responses due to leading question wording.","I"],["Selected individuals fail to respond, and those who do respond differ in meaningful ways.","L"],["A sampling method excludes a portion of the population entirely.","E"]]},
+L:{q:"Which statement best describes the purpose of random assignment in an experiment?",
+o:[["To ensure that the sample represents the population","G"],["To eliminate all sources of bias","N"],["To create treatment groups that are similar with respect to extraneous variables","K"],["To ensure participants do not know which treatment they receive","R"]]},
+K:{q:"A researcher wants to determine whether listening to music improves memory recall. Participants are randomly assigned to either listen to music or sit in silence while studying a list of words. All participants are given the same amount of study time in a small room with no other distractions. They are also given the same amount of time to recall words from the list. Which of the following describes the explanatory variable?",
+o:[["Listening to music while studying","S"],["Whether or not the participant is listening to music while studying","E"],["Number of words recalled from the list","I"],["Amount of study time, in minutes","H"]]},
+E:{q:"A company is testing three different website layouts to determine which leads to the longest average visit time. Users are randomly assigned to one of the three layouts, and the time spent on the website is recorded. Which statement best describes this experimental design?",
+o:[["A completely randomized design because treatments are assigned at random","R"],["A matched pairs design because each user sees one layout","N"],["A randomized block design because users are grouped by layout","T"],["An observational study because no control group is used","G"]]},
+R:{q:"Researchers want to investigate whether two different stretching routines affect sprint time in high school athletes. The researchers believe that prior sprint training experience may influence sprint time. First, athletes are grouped based on whether they have participated in organized sprint training in the past year. Then, within each group, athletes are randomly assigned to one of the two stretching routines. Sprint times are recorded after four weeks of training. Which experimental design is used in this study?",
+o:[["Completely randomized design","H"],["Randomized block design","S"],["Matched pairs design","I"],["Observational study","W"]]},
+S:{q:"A school district wants to examine whether a new online homework platform improves homework completion rates. Two hundred students were randomly selected from all middle school students in the district. The selected students were randomly assigned to either use the new platform or continue using the existing system for one grading period. Homework completion rates were recorded, and the new platform group showed a statistically significant increase. Which of the following statements best describes what can be concluded?",
+o:[["The new platform caused increased homework completion rates for all middle school students.","T"],["The new platform is associated with increased homework completion rates for all middle school students.","A"],["The new platform caused increased homework completion rates for the students in the study and can be generalized to all middle school students in the district.","N"],["The new platform caused increased homework completion rates for the students in the study and cannot be generalized to all middle school students in the district.","G"]]}
+};
+const LETTERS=Object.keys(C);
+const $=id=>document.getElementById(id);
+let start=null,path=[],last=null,name='';
+
+// Tiles in a scrambled (but fixed per visit) order so the grid doesn't hint at the word
+const order=[...LETTERS].sort(()=>Math.random()-.5);
+order.forEach(l=>{const b=document.createElement('button');b.className='tile';b.textContent=l;b.setAttribute('aria-pressed','false');b.onclick=()=>pick(l);$('tiles').appendChild(b)});
+function pick(l){start=l;[...$('tiles').children].forEach(b=>b.setAttribute('aria-pressed',b.textContent===l));$('go').disabled=false}
+$('rnd').onclick=()=>pick(LETTERS[Math.floor(Math.random()*12)]);
+$('go').onclick=()=>{name=$('nm').value.trim();begin()};
+function show(id){['start','play','end'].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
+function begin(){path=[start];last=null;show('play');card()}
+function card(){
+  const l=path[path.length-1],d=C[l];
+  $('ltr').textContent=l;$('q').innerHTML='<p>'+d.q+'</p>';
+  $('opts').innerHTML='';
+  d.o.forEach(([t,dest])=>{const b=document.createElement('button');b.className='opt';b.textContent=t;b.onclick=()=>answer(dest);$('opts').appendChild(b)});
+  $('trail').innerHTML=path.map((p,i)=>'<span'+(i===path.length-1?' class="now"':'')+'>'+p+'</span>').join('');
+}
+function answer(dest){
+  if(path.includes(dest)){last=dest;finish();return}
+  path.push(dest);card();window.scrollTo(0,0);
+}
+function finish(){
+  const ok=path.length===12&&last===start;
+  $('verdict').textContent=ok?'🍬 Treat! You made it home with a full bag.':'👻 Trick! Something spooked your route.';
+  $('verdict').className=ok?'good':'badc';
+  $('who').textContent=(name?name+' · ':'')+'First house: '+start;
+  $('path').textContent=path.join('');
+  $('msg').textContent=ok
+    ?'You visited all 12 houses. Read your letters in order. What do they spell? Show your teacher to claim your candy.'
+    :(last===start?'You came back to your first house, but skipped some houses, so at least one answer was wrong.'
+      :'You wandered back to house '+last+', which you had already visited, so at least one answer along the way was wrong. Check your work and try again.');
+  $('copied').textContent='';
+  show('end');
+}
+$('again').onclick=begin;
+$('new').onclick=()=>{start=null;$('go').disabled=true;[...$('tiles').children].forEach(b=>b.setAttribute('aria-pressed','false'));show('start')};
+$('copy').onclick=()=>{
+  const t=(name?name+' — ':'')+'First house '+start+' — Route: '+path.join('')+' — '+$('verdict').textContent;
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$('copied').textContent='Copied.').catch(()=>$('copied').textContent='Copy failed. Select the path above instead.');
+};
+</script>
+</body>
+</html>
